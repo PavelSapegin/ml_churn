@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ml-chuln"
+version = "0.1.0"
+description = "ML model for prediction bank churn"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Pavel Sapegin", email = "pawsapegin@yandex.ru" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+# Наборы правил, которые будут проверяться в CI:
+# E, W — PEP8 ошибки и предупреждения
+# F — статический анализ Pyflakes (неиспользуемые импорты, переменные)
+# I — сортировка импортов (замена isort)
+# N — проверка соглашений об именовании (PEP8 Naming)
+# B — поиск скрытых багов и антипаттернов (flake8-bugbear)
+# A — проверка на перезапись встроенных функций (builtins)
+# PT — лучшие практики для Pytest
+select = ["E", "W", "F", "I", "N", "B", "A", "PT"]
+ignore = [
+    "A003",  # Разрешаем атрибутам класса перекрывать встроенные имена (например, id)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# В тестах и Jupyter-ноутбуках можно делать вещи, которые непозволительны в продакшн-коде
+"tests/*" = ["S101", "D"] # Разрешаем assert и отключаем требования к docstrings в тестах
+"notebooks/*" = ["E402", "F401", "F841"] # Разрешаем импорты не в начале файла и неиспользуемые переменные
+
+[tool.ruff.lint.isort]
+# Группируем кастомные локальные модули отдельно от сторонних библиотек
+known-first-party = ["src"]
+
+# Настройки статического анализатора типов Mypy
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+ignore_missing_imports = true # Полезно для ML-пакетов без встроенных типов (например, sklearn)
+
+[[tool.mypy.overrides]]
+# Смягчаем strict-правила для папки с тестами
+module = "tests.*"
+allow_untyped_defs = true
+
+# Настройки Pytest для запуска тестов
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --doctest-modules"
+testpaths = [
+    "tests",
+]
+python_files = ["test_*.py"]
+# Определение кастомных маркеров (например, чтобы отделять быстрые тесты от тяжелого обучения)
+markers = [
+    "slow: тесты, которые занимают много времени (например, оверфиттинг модели)",
+    "unit: изолированные unit-тесты функций",
+]
