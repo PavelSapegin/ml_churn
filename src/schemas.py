@@ -9,12 +9,13 @@ class Customer(BaseModel):
     country: Literal["France", "Germany", "Spain"]
     gender: Literal["Male", "Female"]
     age: int = Field(ge=18, le=100)
-    tenure: int = Field(ge=0,le=10)
+    tenure: int = Field(ge=0, le=10)
     balance: float = Field(ge=0, le=1_000_000)
     products_number: int = Field(ge=1)
     credit_card: bool
     active_member: bool
     estimated_salary: float = Field(ge=0)
+
 
 class BatchRequest(BaseModel):
     customers: List[Customer]
