@@ -114,3 +114,78 @@ XGBoost (`max_depth` до 15) Random Forest стабильно показыва�
 ### Осталось на будущее
 
 - Деплой модели (FastAPI + Docker)
+
+## Итоги третьей итерации: Деплой
+
+Собран единый `sklearn.Pipeline`, объединяющий весь путь от сырых данных до
+предсказания: feature engineering (`FunctionTransformer` с функцией
+`create_new_features` — добавляет `balance_per_product` и `balance_per_tenure`),
+кодирование/масштабирование (`transformer_final`) и финальную модель
+(Random Forest). Пайплайн обучен на `train+val`, проверен на воспроизводимость
+метрик и сохранён через `joblib`.
+
+Реализован API на **FastAPI** (эндпоинт `POST /predict`), принимающий батч
+клиентов и возвращающий вероятность ухода для каждого. `customer_id` не
+участвует в предсказании — отделяется перед подачей в модель и "приклеивается"
+обратно к результату для идентификации клиента.
+
+Входные данные валидируются через Pydantic (`schemas.py`) с ограничением
+допустимых диапазонов (`Field(ge=..., le=...)`) и допустимых категорий
+(`Literal` для `country`/`gender`). Диапазоны введены осознанно: Random Forest
+в силу своей структуры не экстраполирует — значения за пределами диапазона
+обучающих данных не получают содержательного веса и не отражают реальную
+картину по клиенту, а API до этого момента пропускал их без предупреждения.
+
+Приложение упаковано в **Docker** (`python:3.11-slim`, слои упорядочены так,
+чтобы установка зависимостей кэшировалась отдельно от изменений кода).
+
+### Структура проекта
+
+```
+├── src/
+│   ├── analisys.ipynb
+│   ├── main.py FastAPI-приложение, эндпоинт /predict
+│   ├── preprocessing.py - create_new_features — feature engineering
+│   └── schemas.py Customer, BatchRequest — Pydantic-валидация
+├── .gitignore
+├── Dockerfile
+├── LICENSE
+├── pyproject.toml
+├── README.md
+└── requirements.txt
+```
+
+### Как запустить
+
+```bash
+docker build -t churn-api .
+docker run -p 8000:8000 churn-api
+```
+
+Пример запроса:
+
+```python
+import requests
+
+data = {
+    "customers": [
+        {
+            "customer_id": 101,
+            "credit_score": 650,
+            "country": "France",
+            "gender": "Male",
+            "age": 25,
+            "tenure": 2,
+            "balance": 1500.50,
+            "products_number": 2,
+            "credit_card": True,
+            "active_member": True,
+            "estimated_salary": 50000.0,
+        }
+    ]
+}
+
+response = requests.post("http://127.0.0.1:8000/predict", json=data)
+print("Статус:", response.status_code)
+print("Ответ:", response.json())
+```
